@@ -1,0 +1,19 @@
+{
+  "name": "Savannah Checklist",
+  "short_name": "Savannah",
+  "description": "Checklist cockpit ULM Savannah",
+  "start_url": "./savannah_checklist.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f0e",
+  "theme_color": "#0d0f0e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

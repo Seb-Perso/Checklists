@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d0f0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Savannah">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Savannah — Checklist Cockpit</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f0e;
+    --panel: #131815;
+    --border: #2a3428;
+    --green: #4ade80;
+    --green-dim: #1a3d2a;
+    --amber: #f59e0b;
+    --amber-dim: #3d2a06;
+    --red: #ef4444;
+    --text: #d4e8d0;
+    --text-dim: #5a7055;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #0a1a0d 0%, #0d1f10 50%, #091208 100%);
+    border-bottom: 2px solid var(--green);
+    padding: 24px 32px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .aircraft-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .title {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .title span { color: var(--green); }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .progress-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 140px;
+  }
+
+  .progress-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  .progress-bar {
+    width: 140px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), #86efac);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .reset-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 2px;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .reset-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Phase separator */
+  .phase {
+    margin-top: 24px;
+    margin-bottom: 4px;
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--green-dim);
+    border-left: 4px solid var(--green);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .phase-number {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 2px;
+    min-width: 32px;
+  }
+
+  .phase-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green);
+  }
+
+  .phase-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Warning phase */
+  .phase-header.warn {
+    background: var(--amber-dim);
+    border-color: var(--amber);
+  }
+  .phase-header.warn .phase-number,
+  .phase-header.warn .phase-title { color: var(--amber); }
+
+  /* Checklist item */
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--panel);
+    transition: all 0.15s;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .item:hover { border-color: #3a5038; background: #161e14; }
+
+  .item.done {
+    border-color: var(--green-dim);
+    background: #0f1a10;
+    opacity: 0.75;
+  }
+
+  .item-check {
+    width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0f0a;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+
+  .item.done .item-check {
+    background: var(--green-dim);
+    color: var(--green);
+    border-color: var(--green-dim);
+  }
+
+  .item-body {
+    flex: 1;
+    padding: 10px 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 44px;
+  }
+
+  .item-action {
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.3;
+    transition: color 0.15s;
+  }
+
+  .item.done .item-action {
+    text-decoration: line-through;
+    color: var(--text-dim);
+  }
+
+  .item-value {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .val-green { background: var(--green-dim); color: var(--green); }
+  .val-amber { background: var(--amber-dim); color: var(--amber); }
+  .val-red { background: #3d0a0a; color: var(--red); }
+  .val-blue { background: #0a1a3d; color: #60a5fa; }
+  .val-white { background: #1a1f1a; color: #e5e5e5; }
+
+  /* Warning item */
+  .item.warning {
+    border-color: #3d2a06;
+    background: #130e05;
+  }
+  .item.warning .item-check { background: var(--amber-dim); }
+  .item.warning:hover { border-color: var(--amber); }
+  .item.warning.done { opacity: 0.6; }
+
+  .item-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 0 14px 8px;
+    line-height: 1.5;
+  }
+
+  /* Complete banner */
+  .complete-banner {
+    display: none;
+    margin-top: 32px;
+    padding: 20px 24px;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    text-align: center;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--green);
+    animation: pulse 2s ease infinite;
+  }
+
+  .complete-banner.visible { display: block; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Divider line */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  @media (max-width: 600px) {
+    .header { padding: 16px; flex-wrap: wrap; }
+    .title { font-size: 22px; }
+    .item-body { padding: 10px 10px; }
+    .item-action { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="aircraft-id">ULM — CHECKLIST OPÉRATIONNELLE</div>
+    <div class="title">SAVAN<span>NAH</span></div>
+    <div class="subtitle">Installation cockpit → Décollage</div>
+  </div>
+  <div class="progress-container">
+    <div class="progress-text" id="prog-text">0 / 0 accomplis</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    <button class="reset-btn" onclick="resetAll()">↺ Réinit.</button>
+  </div>
+</div>
+
+<div class="container" id="checklist-container">
+  <!-- JS injecte le contenu -->
+</div>
+
+<script>
+const checklist = [
+  {
+    phase: "INSTALLATION COCKPIT",
+    code: "01",
+    items: [
+      { action: "Niveau d'essence", value: "VÉRIFIÉ", type: "green" },
+      { action: "Robinet essence", value: "OUVERT", type: "green" },
+      { action: "Cache pitot", value: "RETIRÉ", type: "amber" },
+      { action: "Lunettes, cartes, tablette, casque", value: "À BORD", type: "green" },
+      { action: "Porte", value: "FERMÉE", type: "green" },
+    ]
+  },
+  {
+    phase: "MISE EN ROUTE MOTEUR",
+    code: "02",
+    items: [
+      { action: "Frein de parc", value: "SERRÉ", type: "amber" },
+      { action: "Manette des gaz", value: "LÉGÈREMENT OUVERT", type: "amber" },
+      { action: "Interrupteur général", value: "ON", type: "green" },
+      { action: "Pompe électrique 5 sec (si équipé) ou choke / starter", value: "ACTIONNÉ", type: "green" },
+      { action: "Magnétos", value: "BOTH", type: "green" },
+      { action: "Zone moteur — personnes dégagées de l'hélice", value: "DÉGAGÉ", type: "red", warning: true },
+      { action: "Démarrage moteur", value: "CONTACT !", type: "amber" },
+      { action: "Pression huile", value: "MONTÉE < 30 SEC", type: "green", note: "Si pas de pression d'huile en 30 s → couper moteur immédiatement" },
+    ]
+  },
+  {
+    phase: "MISE EN ROUTE INSTRUMENTS",
+    code: "03",
+    items: [
+      { action: "Alternateur", value: "ON", type: "green" },
+      { action: "Switch master électrique", value: "ON", type: "green" },
+      { action: "Strobe & phares", value: "ON", type: "green" },
+      { action: "Radio — fréquence sélectionnée", value: "RÉGLÉE", type: "blue" },
+      { action: "Transpondeur", value: "7000 / ALT", type: "blue" },
+      { action: "Calage altimétrique (si ref = parking)", value: "CALÉ", type: "green" },
+      { action: "Volets rentrés & trim standard", value: "CONFIRMÉS", type: "green" },
+    ]
+  },
+  {
+    phase: "ROULAGE",
+    code: "04",
+    items: [
+      { action: "ATIS", value: "CONSULTÉ", type: "blue" },
+      { action: "Radio — test & message", value: "EFFECTUÉ", type: "blue" },
+      { action: "Freins", value: "DESSERRÉS", type: "amber" },
+      { action: "Roulage — test des freins", value: "VÉRIFIÉ", type: "green" },
+      { action: "Roulage — bille, compas & horizon artificiel", value: "VÉRIFIÉS", type: "green" },
+    ]
+  },
+  {
+    phase: "POINT D'ATTENTE",
+    code: "05",
+    warn: true,
+    items: [
+      { action: "Frein de parc", value: "SERRÉ", type: "amber", warning: true },
+      { action: "Commandes — débattement libre", value: "LIBRES & CORRECT", type: "green" },
+      { action: "Attaches (ceintures & portes)", value: "VERROUILLÉES", type: "red", warning: true },
+      { action: "Paramètres moteur", value: "DANS LES LIMITES", type: "green" },
+      { action: "Température huile", value: "≥ 50 °C", type: "amber", note: "Ne pas solliciter le moteur pleine puissance avant 50 °C huile (Rotax 912)" },
+      { action: "Calage altimétrique", value: "CONFIRMÉ", type: "green" },
+      { action: "Fréquences radio", value: "CONFIRMÉES", type: "blue" },
+      { action: "Niveau essence & robinet", value: "CONFIRMÉS", type: "green" },
+      { action: "Test magnétos (lane A puis B)", value: "CHUTE < 300 RPM", type: "green", note: "Chute max 300 RPM, asymétrie entre lanes < 115 RPM (Rotax 912). Au-delà ou moteur irrégulier → NE PAS VOLER" },
+      { action: "Test pleine puissance", value: "RPM NOMINAL", type: "amber" },
+      { action: "Parachute", value: "ARMÉ / GOUPILLE", type: "red", warning: true },
+      { action: "Volets & trim — position décollage", value: "CONFIRMÉS", type: "green" },
+      { action: "Freins", value: "DESSERRÉS", type: "amber" },
+      { action: "Piste libre — vérification visuelle G & D", value: "DÉGAGÉE", type: "red", warning: true },
+      { action: "Radio — autorisation / annonce", value: "OBTENUE", type: "blue" },
+    ]
+  },
+  {
+    phase: "DÉCOLLAGE",
+    code: "06",
+    warn: true,
+    items: [
+      { action: "Vent & QFU", value: "CONFIRMÉ", type: "green" },
+      { action: "Chronomètre", value: "DÉCLENCHÉ", type: "white" },
+    ]
+  }
+];
+
+let states = {};
+let total = 0;
+let done = 0;
+
+function buildChecklist() {
+  const container = document.getElementById('checklist-container');
+  container.innerHTML = '';
+  total = 0;
+
+  checklist.forEach((phase, pi) => {
+    const phaseDiv = document.createElement('div');
+    phaseDiv.className = 'phase';
+
+    const ph = document.createElement('div');
+    ph.className = 'phase-header' + (phase.warn ? ' warn' : '');
+    ph.innerHTML = `
+      <span class="phase-number">${phase.code}</span>
+      <span class="phase-title">${phase.phase}</span>
+      <span class="phase-count" id="phase-count-${pi}">0 / ${phase.items.length}</span>
+    `;
+    phaseDiv.appendChild(ph);
+    container.appendChild(phaseDiv);
+
+    phase.items.forEach((item, ii) => {
+      const key = `${pi}-${ii}`;
+      states[key] = false;
+      total++;
+
+      const div = document.createElement('div');
+      div.className = 'item' + (item.warning ? ' warning' : '');
+      div.id = 'item-' + key;
+      div.onclick = () => toggle(key, pi);
+
+      const valClass = {
+        green: 'val-green', amber: 'val-amber', red: 'val-red',
+        blue: 'val-blue', white: 'val-white'
+      }[item.type] || 'val-white';
+
+      div.innerHTML = `
+        <div class="item-check">○</div>
+        <div>
+          <div class="item-body">
+            <span class="item-action">${item.action}</span>
+            <span class="item-value ${valClass}">${item.value}</span>
+          </div>
+          ${item.note ? `<div class="item-note">⚠ ${item.note}</div>` : ''}
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  });
+
+  document.getElementById('prog-text').textContent = `0 / ${total} accomplis`;
+  updateProgress();
+}
+
+function toggle(key, pi) {
+  states[key] = !states[key];
+  const el = document.getElementById('item-' + key);
+  const check = el.querySelector('.item-check');
+
+  if (states[key]) {
+    el.classList.add('done');
+    check.textContent = '✓';
+  } else {
+    el.classList.remove('done');
+    check.textContent = '○';
+  }
+
+  updateProgress();
+  updatePhaseCount(pi);
+}
+
+function updatePhaseCount(pi) {
+  const phase = checklist[pi];
+  let pDone = 0;
+  phase.items.forEach((_, ii) => {
+    if (states[`${pi}-${ii}`]) pDone++;
+  });
+  document.getElementById(`phase-count-${pi}`).textContent = `${pDone} / ${phase.items.length}`;
+}
+
+function updateProgress() {
+  done = Object.values(states).filter(Boolean).length;
+  const pct = total > 0 ? (done / total * 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-text').textContent = `${done} / ${total} accomplis`;
+
+  let banner = document.getElementById('complete-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'complete-banner';
+    banner.className = 'complete-banner';
+    banner.textContent = '✓ TOUS LES CHECKS ACCOMPLIS — PRÊT AU DÉCOLLAGE';
+    document.getElementById('checklist-container').appendChild(banner);
+  }
+  if (done === total) banner.classList.add('visible');
+  else banner.classList.remove('visible');
+}
+
+function resetAll() {
+  Object.keys(states).forEach(k => states[k] = false);
+  document.querySelectorAll('.item').forEach(el => {
+    el.classList.remove('done');
+    el.querySelector('.item-check').textContent = '○';
+  });
+  checklist.forEach((_, pi) => updatePhaseCount(pi));
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-text').textContent = `0 / ${total} accomplis`;
+  const banner = document.getElementById('complete-banner');
+  if (banner) banner.classList.remove('visible');
+}
+
+buildChecklist();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
