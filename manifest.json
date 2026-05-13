@@ -2,7 +2,7 @@
   "name": "Savannah Checklist",
   "short_name": "Savannah",
   "description": "Checklist cockpit ULM Savannah",
-  "start_url": "./savannah_checklist.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

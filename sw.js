@@ -1,8 +1,8 @@
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `savannah-${VERSION}`;
 const ASSETS = [
   './',
-  './savannah_checklist.html',
+  './index.html',
   './manifest.json',
   './icon.svg',
   'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap'
